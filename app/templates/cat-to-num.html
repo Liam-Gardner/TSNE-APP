@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Categorical to Numerical</title>
+  </head>
+  <body>
+    <h1>Choose which Columns to convert to numerical</h1>
+
+    <h1>{{filename}}</h1>
+    {{data | safe}}
+
+    <form action="" method="post" novalidate>
+      {% for val in colHeaders: %}
+      <p>{{ form|attr(val) }} {{ val }}</p>
+      {% endfor %}
+
+      <p>{{ form.submit() }}</p>
+    </form>
+  </body>
+</html>
