@@ -69,6 +69,7 @@ def convertCategricalToNumerical(formData, filename):
     uniqueColEntries = {}
     for idx, col in enumerate(cols):
         uniqueList = df[col].unique()
+        # convert numpy array to list
         uniqueList = uniqueList.tolist()
         # sort modifies the list in place
         if col == "month":
@@ -83,7 +84,7 @@ def convertCategricalToNumerical(formData, filename):
     # we are overwriting shit here!
     # create new filename to smash the cache
     df.to_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename), index=False)
-    # return filename
+    # the idea of this return is so that the caller knows when all the above work is done. WAnted to implement async/await but having trouble...
     return filename
 
 
@@ -98,96 +99,130 @@ def plotCorrelation(dataset):
         showscale=True,
     )
     filename = "corrheatmap.png"
-    # offline.plot(figure, filename="corrheatmap.html")
+    offline.plot(
+        figure,
+        filename=os.path.join(
+            app.config["PLOTS_UPLOAD_FOLDER"], "plotly-corrheatmap.html"
+        ),
+        auto_open=False,
+    )
     # image quality is not great, cols are on top of each other
-    figure.write_image(os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filename))
+    figure.write_image(
+        os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filename),
+        width=1050,
+        height=560,
+        scale=1,
+    )
     return filename
 
 
 # Dividing dataset into label and feature sets
 # drop one of the high correlation
-def dropFeatures(dataset):
-    return dataset.drop(["poutcome"], axis=1)  # Features
+def dropColumns(formData, filename):
+    df = pd.read_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename))
+    colHeaders = df.columns
 
+    checkedCols = dict(filter(lambda elem: elem[1] == True, formData.items()))
+    print("\n\n checked incl submit etc...\n", checkedCols)
+    # we are going to mutate/edit the dataframe
+    def myFilter(elem):
+        for col in colHeaders:
+            if elem[0] == col:
+                return elem
 
-# create subsets because even though we dropped some cols, we still have too many
-# try this with - age, gender, marital status, education, educationField,
+    # Filter out non colHeaders
+    finalDict = dict(filter(myFilter, checkedCols.items()))
+    print("\n\n removed submit etc...\n", finalDict)
+
+    # list of keys
+    cols = []
+    for key, value in finalDict.items():
+        cols.append(key)
+    print("\n\n just the checked col headers...\n", cols)
+
+    for col in cols:
+        print("\n gonna drop the ", col, "column")
+        df.drop([col], axis=1, inplace=True)
+
+    print("\n Current list of cols: ", df.columns)
+
+    df.to_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename), index=False)
+
+    return filename
+
+    # return dataset.drop(["poutcome"], axis=1)  # Features
+
 
 #### need to run the elbow plot on every subset to find the number of clusters ###
 
 
-def createSubsets(dataset):
-    subsetChurn = dataset[
-        [
-            "Age",
-            "Gender",
-            "MaritalStatus",
-            "Education",
-            "EducationField",
-            "DistanceFromHome",
-        ]
-    ]  # specify cols or...
-    # subset2 = dataset.iloc[:,0:8] # specify cols by index
+def createSubsets(formData, filename, subsetName):
+    df = pd.read_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename))
+    colHeaders = df.columns
 
-    # maybe assign the return of createSubsets to X instaed
+    checkedCols = dict(filter(lambda elem: elem[1] == True, formData.items()))
+    print("\n\n checked incl submit etc...\n", checkedCols)
+    # we are going to mutate/edit the dataframe
+    def myFilter(elem):
+        for col in colHeaders:
+            if elem[0] == col:
+                return elem
 
+    # Filter out non colHeaders
+    finalDict = dict(filter(myFilter, checkedCols.items()))
+    print("\n\n removed submit etc...\n", finalDict)
 
-# X = subsetChurn
+    # list of keys
+    cols = []
+    for key, value in finalDict.items():
+        cols.append(key)
+    print("\n\n just the checked col headers...\n", cols)
 
-## Normalizing numerical features so that each feature has mean 0 and variance 1
-def normaliseNumericalFeatures(subset):
-    feature_scaler = StandardScaler()
-    X_scaled = feature_scaler.fit_transform(subset)
-    print("X_scaled 1", X_scaled)
+    subset = df[cols]
+    # write the new subset, dynamic name pls!
+    filename = subsetName.replace(" ", "")
+    filename = filename + ".csv"  # needed?
+    subset.to_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename), index=False)
+    return filename
 
 
 ### Implementing PCA to visualize dataset
 # we see that all the points are on top of each other so we decide to use t-SNE instead
 # That is all we are doing here, looking at PCA, deciding, nah, and moving onto t-SNE
-def pcaVisualisation(subset1):
+def pcaVisualisation(filename):
+    subset = pd.read_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename))
+
     pca = PCA(n_components=2)
+
+    # normaliseNumericalFeatures
     feature_scaler = StandardScaler()
-    X_scaled = feature_scaler.fit_transform(subset1)
+    X_scaled = feature_scaler.fit_transform(subset)
+
     pca.fit(X_scaled)
-    print("X_scaled 2 PCA", X_scaled)
+    # print("X_scaled 2 PCA", X_scaled)
     x_pca = pca.transform(X_scaled)
-    print("X_scaled 3 PCA", X_scaled)
-    print(
-        "Variance explained by each of the n_components: ",
-        pca.explained_variance_ratio_,
-    )
-    print(
-        "Total variance explained by the n_components: ",
-        sum(pca.explained_variance_ratio_),
-    )
+    # print("X_scaled 3 PCA", X_scaled)
+    # print(
+    #     "Variance explained by each of the n_components: ",
+    #     pca.explained_variance_ratio_,
+    # )
+    # print(
+    #     "Total variance explained by the n_components: ",
+    #     sum(pca.explained_variance_ratio_),
+    # )
 
     plt.figure(figsize=(8, 6))
     plt.scatter(x_pca[:, 0], x_pca[:, 1], cmap="plasma")
     plt.xlabel("First Principal Component")
     plt.ylabel("Second Principal Component")
-    plt.savefig("PCA.png")
-    # plt.show()
-
-
-# implementing K-Means CLustering on dataset and visualizing clusters
-def implementKMeans(subset):
-    feature_scaler = StandardScaler()
-    pca = PCA(n_components=2)
-    kmeans = KMeans(n_clusters=2)  # elbow is at 2 so we should only have 2 clusters
-    X_scaled = feature_scaler.fit_transform(subset)
-    kmeans.fit(X_scaled)
-    print("X_scaled 4 kmeans", X_scaled)
-    print("Cluster Centers: \n", kmeans.cluster_centers_)
-    plt.figure(figsize=(8, 6))
-    x_pca = pca.transform(X_scaled)
-    plt.scatter(x_pca[:, 0], x_pca[:, 1], c=kmeans.labels_, cmap="plasma")
-    plt.xlabel("First Principal Component")
-    plt.ylabel("Second Principal Component")
-    plt.savefig("KMeans.png")
+    filename = "pca.png"
+    plt.savefig(os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filename))
+    return filename
 
 
 # Finding the number of clusters (K) - Elbow Plot Method
-def elbowPlotVisualisation(subset):
+def elbowPlotVisualisation(subsetFilename):
+    subset = pd.read_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], subsetFilename))
     inertia = []
     feature_scaler = StandardScaler()
     X_scaled = feature_scaler.fit_transform(subset)
@@ -197,62 +232,133 @@ def elbowPlotVisualisation(subset):
         # kmeans.inertia_ = Sum of squared distances of samples to their closest cluster center.
         inertia.append(kmeans.inertia_)
 
-    print("X_scaled 5 Elbow", X_scaled)
+    # print("X_scaled 5 Elbow", X_scaled)
 
     plt.plot(range(1, 11), inertia)
     plt.title("The Elbow Plot")
     plt.xlabel("Number of clusters")
     plt.ylabel("Inertia")
-    plt.savefig("Elbow.png")
+    filename = "elbow-plot.png"
+    plt.savefig(os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filename))
+    return filename
+
+
+# implementing K-Means CLustering on dataset and visualizing clusters
+# clusters will now be revealed through colour but will still sit on top of each other
+def implementKMeans(subsetFilename, clusters):
+    # get dataframe
+    subset = pd.read_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], subsetFilename))
+    clusters = int(clusters)
+
+    # normaliseNumericalFeatures
+    feature_scaler = StandardScaler()
+    X_scaled = feature_scaler.fit_transform(subset)
+
+    # why?
+    pca = PCA(n_components=2)
+    pca.fit(X_scaled)
+
+    # kmeans
+    kmeans = KMeans(n_clusters=clusters)
+    kmeans.fit(X_scaled)
+
+    # info
+    # print("X_scaled 4 kmeans", X_scaled)
+    # print("Cluster Centers: \n", kmeans.cluster_centers_)
+
+    # plot
+    plt.figure(figsize=(8, 6))
+    x_pca = pca.transform(X_scaled)
+    plt.scatter(x_pca[:, 0], x_pca[:, 1], c=kmeans.labels_, cmap="plasma")
+    plt.xlabel("First Principal Component")
+    plt.ylabel("Second Principal Component")
+
+    filename = "Kmeans.png"
+    plt.savefig(os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filename))
+
+    return {"kmeansSrc": filename, "kmeansLabels": kmeans.labels_}
 
 
 ### Implementing t-SNE to visualize dataset
-def implementTSNE(subset):
-    feature_scaler = StandardScaler()
-    X_scaled = feature_scaler.fit_transform(subset)
-    tsne = TSNE(n_components=2, perplexity=50, n_iter=3000)
-    x_tsne = tsne.fit_transform(X_scaled)
-    print("X_scaled 6 t-SNE", X_scaled)
+def implementTSNE(subsetFilename, clusters, perplexity, iterations, kmeansLabels):
+    subset = pd.read_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], subsetFilename))
+    # feature_scaler = StandardScaler()
+    # X_scaled = feature_scaler.fit_transform(subset)
 
-    Age = list(subset["Age"])
-    Gender = list(subset["Gender"])
-    Education = list(subset["Education"])
-    EducationField = list(subset["EducationField"])
-    DistanceFromHome = list(subset["DistanceFromHome"])
-    MaritalStatus = list(subset["MaritalStatus"])
+    # tsne = TSNE(
+    #     n_components=int(clusters), perplexity=int(perplexity), n_iter=int(iterations)
+    # )
+    # x_tsne = tsne.fit_transform(X_scaled)
 
-    data = [
-        go.Scatter(
-            x=x_tsne[:, 0],
-            y=x_tsne[:, 1],
-            mode="markers",
-            marker=dict(color="#F00", colorscale="Rainbow", opacity=0.5),
-            text=[
-                f"Age: {a}; Gender: {b}; Education:{c}; EducationField:{d}; DistanceFromHome:{e}; MaritalStatus:{f}"
-                for a, b, c, d, e, f in list(
-                    zip(
-                        Age,
-                        Gender,
-                        Education,
-                        EducationField,
-                        DistanceFromHome,
-                        MaritalStatus,
-                    )
-                )
-            ],
-            hoverinfo="text",
-        )
-    ]
+    # print("X_scaled 6 t-SNE", X_scaled)
 
-    layout = go.Layout(
-        title="t-SNE Dimensionality Reduction",
-        width=700,
-        height=700,
-        xaxis=dict(title="First Dimension"),
-        yaxis=dict(title="Second Dimension"),
-    )
-    fig = go.Figure(data=data, layout=layout)
-    offline.plot(fig, filename="t-SNE.html")
+    # get cols
+    colList = subset.columns
+    print(f"\n colList: ${colList}")
+
+    # bigList = []
+    # for col in colList:
+    #     bigList.append(list(subset[col]))
+
+    listOfColumnValues = list(subset[colList[0]])
+    print(f"\n listOfColumnValues: {listOfColumnValues[0:10]}")
+
+    # text = [f"Age: {a};" for a in list(zip(listOfColumnValues[0:10]))]
+    # print(f"\n Text: {text}")
+
+    return {"colList": colList, "listOfColumnValues": listOfColumnValues}
+    # replace with subset
+    # Age = list(subset["Age"])
+    # Gender = list(subset["Gender"])
+    # Education = list(subset["Education"])
+    # EducationField = list(subset["EducationField"])
+    # DistanceFromHome = list(subset["DistanceFromHome"])
+    # MaritalStatus = list(subset["MaritalStatus"])
+
+    # data = [
+    #     go.Scatter(
+    #         x=x_tsne[:, 0],
+    #         y=x_tsne[:, 1],
+    #         mode="markers",
+    #         marker=dict(color=kmeansLabels, colorscale="Rainbow", opacity=0.5),
+    #         # replace with subset
+    #         text=[
+    #             f"Age: {a}; Gender: {b}; Education:{c}; EducationField:{d}; DistanceFromHome:{e}; MaritalStatus:{f}"
+    #             for a, b, c, d, e, f in list(
+    #                 zip(
+    #                     Age,
+    #                     Gender,
+    #                     Education,
+    #                     EducationField,
+    #                     DistanceFromHome,
+    #                     MaritalStatus,
+    #                 )
+    #             )
+    #         ],
+    #         hoverinfo="text",
+    #     )
+    # ]
+
+    # layout = go.Layout(
+    #     title="t-SNE Dimensionality Reduction",
+    #     width=700,
+    #     height=700,
+    #     xaxis=dict(title="First Dimension"),
+    #     yaxis=dict(title="Second Dimension"),
+    # )
+    # fig = go.Figure(data=data, layout=layout)
+
+    # # save the file
+    # subsetName = subsetFilename.split(".", 1)[0]
+    # filename = f"t-SNE-{subsetName}.png"
+    # plt.savefig(os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filename))
+    # # show the interactive plot
+    # htmlFile = f"t-SNE-{subsetName}.html"
+    # offline.plot(
+    #     fig,
+    #     filename=os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filename=htmlFile),
+    #     auto_open=False,
+    # )
 
 
 # need to run the elbow plot on every subset to find the number of clusters
