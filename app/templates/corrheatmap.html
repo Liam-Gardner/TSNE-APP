@@ -6,11 +6,21 @@
     <title>Correlation Heatmap</title>
   </head>
   <body>
-    <div style="width: 100%;">
-      <img
-        src="{{ url_for('static', filename = heatMapSrc) }}"
-        style="width: 100%;"
-      />
+    <div>
+      <img src="{{ url_for('static', filename = heatMapSrc) }}" />
+    </div>
+    <div>
+      <form action="{{ url_for('static', filename = heatMapWebPage) }}">
+        <input type="submit" value="Higher quality image" />
+      </form>
+      <h3>Choose columns to drop</h3>
+      <form action="" method="post" novalidate>
+        {% for val in colHeaders: %}
+        <p>{{ form|attr(val) }} {{ val }}</p>
+        {% endfor %}
+
+        <p>{{ form.submit() }}</p>
+      </form>
     </div>
   </body>
 </html>
