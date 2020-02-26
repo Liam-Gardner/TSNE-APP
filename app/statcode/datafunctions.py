@@ -80,7 +80,28 @@ def convertCategricalToNumerical(formData, filename):
             uniqueColEntries[val] = idx
         df[col] = df[col].map(uniqueColEntries)
 
-    # write the new data frame to the server as csv and
+    #######################################################
+    # Marketing.csv only!
+
+    def convertAge(column):
+        if column > 39:  # median age
+            return 1  # above
+        else:
+            return 0  # below
+
+    def convertMarital(column):
+        if column == 1:
+            return 1  # married
+        else:
+            return 0  # single/divorced
+
+    if filename == "Marketing.csv":
+        df["age"] = df["age"].apply(convertAge)
+        df["marital"] = df["marital"].apply(convertMarital)
+
+    ##########################################################
+
+    # write the new data frame to the server as csv
     # we are overwriting here!
     df.to_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename), index=False)
     # the idea of this return is so that the caller knows when all the above work is done. Wanted to implement async/await but having trouble...
@@ -98,22 +119,21 @@ def plotCorrelation(dataset, filename):
         showscale=True,
     )
     heatMapFileName = filename.split(".", 1)[0]
-    filename = f"{heatMapFileName}-corrheatmap.png"
+    filenameImg = f"{heatMapFileName}-corrheatmap.png"
+    filenameHtml = f"{heatMapFileName}-corrheatmap.html"
     offline.plot(
         figure,
-        filename=os.path.join(
-            app.config["PLOTS_UPLOAD_FOLDER"], "plotly-corrheatmap.html"
-        ),
+        filename=os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filenameHtml),
         auto_open=False,
     )
     # image quality is not great, cols are on top of each other
     figure.write_image(
-        os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filename),
+        os.path.join(app.config["PLOTS_UPLOAD_FOLDER"], filenameImg),
         width=1050,
         height=560,
         scale=1,
     )
-    return filename
+    return {"filenameImg": filenameImg, "filenameHtml": filenameHtml}
 
 
 # Dividing dataset into label and feature sets
@@ -285,9 +305,7 @@ def implementTSNE(subsetFilename, clusters, perplexity, iterations):
     kmeans = KMeans(n_clusters=int(clusters))
     kmeans.fit(X_scaled)
 
-    tsne = TSNE(
-        n_components=int(clusters), perplexity=int(perplexity), n_iter=int(iterations)
-    )
+    tsne = TSNE(n_components=2, perplexity=int(perplexity), n_iter=int(iterations))
     x_tsne = tsne.fit_transform(X_scaled)
 
     # get cols

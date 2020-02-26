@@ -96,7 +96,9 @@ def showCorrelation(newDataFrameFileName):
         os.path.join(app.config["DATA_UPLOAD_FOLDER"], newDataFrameFileName)
     )
     # run plotcorrelation - this saves plot to server
-    heatMapImageFileName = plotCorrelation(df, newDataFrameFileName)
+    heatMapFileNames = plotCorrelation(df, newDataFrameFileName)
+    heatMapImageFileName = heatMapFileNames["filenameImg"]
+    heatMapImageHtml = heatMapFileNames["filenameHtml"]
 
     colHeaders = df.columns
 
@@ -119,7 +121,7 @@ def showCorrelation(newDataFrameFileName):
     return render_template(
         "corrheatmap.html",
         heatMapSrc=heatMapImageFileName,
-        heatMapWebPage="plotly-corrheatmap.html",
+        heatMapWebPage=heatMapImageHtml,
         form=form,
         colHeaders=colHeaders,
     )
