@@ -65,3 +65,6 @@ Currently we have to comment out and edit the code to:
 8. Is writing the files the best approach? Investigate...
 9. The forms file should be one class that can take in fieldnames and pass the value into whatever field we want.
 10. All commented out prints should be displayed as extra info in UI.
+11. Display on screen the results of the categorical to numerical, because right now if we see for example "Job": 0, "Job": 1, we are not sure what categories these represent.
+
+- They are ordered alphabetically before being given a number so that is how we know - need to make clear to user
