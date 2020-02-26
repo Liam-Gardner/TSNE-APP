@@ -1,5 +1,9 @@
-from app import app
+import os
+import pandas as pd
 from flask import render_template, flash, url_for, redirect
+from werkzeug.utils import secure_filename
+from wtforms.fields.core import BooleanField
+from app import app
 from app.forms import (
     CheckForm,
     UploadDataFile,
@@ -8,10 +12,6 @@ from app.forms import (
     RedirectFormElbow,
     ClusterNumberForm,
 )
-from wtforms.fields.core import BooleanField
-from werkzeug.utils import secure_filename
-import os
-import pandas as pd
 from app.statcode.datafunctions import (
     plotCorrelation,
     convertCategricalToNumerical,
@@ -27,8 +27,7 @@ from app.statcode.datafunctions import (
 @app.route("/")
 @app.route("/index")
 def index():
-    user = {"username": "Liam"}
-    return render_template("index.html", title="Home", user=user)
+    return "..."
 
 
 # step 1
@@ -43,7 +42,6 @@ def uploadFile():
         form.file.data.save(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename))
 
         # we wont pass df, we will just pass filename
-        # df = pd.read_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename))
         return redirect(url_for("catToNum", filename=filename))
 
     return render_template("upload.html", form=form)
@@ -52,7 +50,6 @@ def uploadFile():
 # step 2
 # handle categorical to numerical
 @app.route("/step-2-cat-to-num/<filename>", methods=["POST", "GET"])
-# TODO: make me async!
 def catToNum(filename):
     # do data stuff
     df = pd.read_csv(os.path.join(app.config["DATA_UPLOAD_FOLDER"], filename))
@@ -69,7 +66,6 @@ def catToNum(filename):
         print("catToNum Submitting...")
         formData = form.data
 
-        # use checked cols to convert to numerical
         # this should await
         conversionIsDone = convertCategricalToNumerical(formData, filename)
 
@@ -80,10 +76,9 @@ def catToNum(filename):
                 url_for("showCorrelation", newDataFrameFileName=conversionIsDone)
             )
         else:
+            # TODO: display me in the render
             flash("Working...", "message")
 
-    # show dataframe first so they can see the numerical cols
-    # show form with checkboxes beside cols
     # TODO: add css in the 'to_html method'
     return render_template(
         "cat-to-num.html",
@@ -101,7 +96,7 @@ def showCorrelation(newDataFrameFileName):
         os.path.join(app.config["DATA_UPLOAD_FOLDER"], newDataFrameFileName)
     )
     # run plotcorrelation - this saves plot to server
-    heatMapImageFileName = plotCorrelation(df)
+    heatMapImageFileName = plotCorrelation(df, newDataFrameFileName)
 
     colHeaders = df.columns
 
@@ -112,7 +107,6 @@ def showCorrelation(newDataFrameFileName):
     form = CheckForm()
 
     if form.is_submitted():
-        print("dropping columns submitting...")
         formData = form.data
 
         # function to drop cols
@@ -129,13 +123,11 @@ def showCorrelation(newDataFrameFileName):
         form=form,
         colHeaders=colHeaders,
     )
-    # can we add on a button to route to step 2?
 
 
 # step 4 create subsets
 @app.route("/step-4-subsets/<newDataFrameFileName>", methods=["POST", "GET"])
 def createSubsetsPage(newDataFrameFileName):
-    # do data stuff
     df = pd.read_csv(
         os.path.join(app.config["DATA_UPLOAD_FOLDER"], newDataFrameFileName)
     )
@@ -149,18 +141,13 @@ def createSubsetsPage(newDataFrameFileName):
     form = SubsetForm()
 
     if form.is_submitted():
-        print("Create Subsets Submitting...")
         formData = form.data
         subsetName = form.subsetName.data
 
-        print("\n all form data \n", formData)
-        print("\n subsetName \n", subsetName)
-
-        # use checked cols to convert to numerical
         # this should await
         subsetFilename = createSubsets(formData, newDataFrameFileName, subsetName)
 
-        # show correlation
+        # show PCA
         # TODO: this should be handled better(try/catch)
         if subsetFilename:
             return redirect(url_for("showPCA", subsetFilename=subsetFilename))
@@ -186,7 +173,6 @@ def showPCA(subsetFilename):
     if form.is_submitted():
         return redirect(url_for("showElbowPlot", subsetFilename=subsetFilename))
 
-    # render
     return render_template("show-pca.html", form=form, filename=pcaImgSrc)
 
 
@@ -221,7 +207,7 @@ def showKMeans(subsetFilename, clusters):
                 "showTSNE",
                 clusters=clusters,
                 subsetFilename=subsetFilename,
-                kmeansLabels=kmeansDict["kmeansLabels"],
+                # kmeansLabels=kmeansDict["kmeansLabels"],
                 perplexity=perplexity,
                 iterations=iterations,
             )
@@ -233,18 +219,14 @@ def showKMeans(subsetFilename, clusters):
 
 # Step 8 TSNE
 @app.route(
-    "/step-8-tsne/<clusters>/<subsetFilename>/<kmeansLabels>/<perplexity>/<iterations>",
+    "/step-8-tsne/<clusters>/<subsetFilename>/<perplexity>/<iterations>",
     methods=["POST", "GET"],
 )
-def showTSNE(clusters, subsetFilename, kmeansLabels, perplexity, iterations):
+def showTSNE(clusters, subsetFilename, perplexity, iterations):
 
-    infoDict = implementTSNE(
-        subsetFilename, clusters, perplexity, iterations, kmeansLabels
-    )
+    implementTSNE(subsetFilename, clusters, perplexity, iterations)
 
     subsetName = subsetFilename.split(".", 1)[0]
+    filename = f"t-SNE-{subsetName}.html"
 
     return "OK"
-
-    # return render_template(f"t-SNE-{subsetName}.html")
-
