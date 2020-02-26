@@ -2,7 +2,9 @@
 
 Front end that will guide you through the steps needed to use the t-SNE algorithm to visualise data.
 
-## Currently we have to comment out and edit the code to
+## The Problem
+
+Currently we have to comment out and edit the code to:
 
 1. Supply data
 2. Convert categorical to numerical
@@ -11,8 +13,8 @@ Front end that will guide you through the steps needed to use the t-SNE algorith
 5. Create subsets to test
 6. Run PCA
 7. Run elbow plot on each subset
-8. Manually edit the columns we pass to t-SNE function in two places - really fucking annoying
-9. Repeat all for each subset - ridiculous
+8. Manually edit the columns we pass to t-SNE function in two places - really annoying
+9. Repeat all for each subset - not good.
 
 ## The Goal:
 
@@ -32,36 +34,34 @@ Front end that will guide you through the steps needed to use the t-SNE algorith
 11. User selects columns to drop
 12. New dataframe is created
 
-12.1 User is redirected to new page with the new dataframe displayed
+13. User is redirected to new page with the new dataframe displayed
 
-13. User is asked to pick columns to create first subset
-14. User is shown columns with check boxes
+14. User is asked to pick columns to create first subset
+15. User is shown columns with check boxes
 
-15. PCA is run and img stored
-    15.1 Redirect to PCA image / or open in new tab
+16. PCA is run and img stored
+17. Redirect to PCA image / or open in new tab
 
-16. Click next for elbow plot visualisation
+18. Click next for elbow plot visualisation
 
-17. User then inputs elbow plot number
+19. User then inputs elbow plot number
 
-18. T-SNE runs...
+20. T-SNE runs...
 
-## Extras
+## Missing Features
 
-1. Add navigation
-2. Backend can suggest which columns to drop based on correlation greater than 0.5 or greater than -0.5
-3. Embed the plotly correlation html into our web page
-   - so we can add navigation / drop cols checkboxes
-4. Extract the checkbox filter logic ro one function
-   - it is currently repeated in 3 functions
-   - simplify the filter, for example the cat to num func could probably use pandas to figure out which rows are non-numeric and the run the conversion function
-     - that's if we want all the categorical converted
+1. Add navigation. Please.
+2. Backend can suggest which columns to drop based on correlation greater than 0.5 or greater than -0.5.
+3. ~~Embed the plotly correlation html into our web page - so we can add navigation / drop cols checkboxes.~~
+4. Extract the checkbox filter logic to one function.
+   - it is currently repeated in 3 functions.
+   - simplify the filter, for example the cat to num func could probably use pandas to figure out which rows are non-numeric and then run the conversion function.
+   - but only if we want all the categorical converted.
 5. Create subset
-   - need navigation beacuse we need to run this multiple times
+   - need navigation beacuse we need to run this multiple times.
 6. Loaders
-   - the flash method should be linked up to the template
-7. Use plotly instead of matplotlib on pca / kmeans / t-sne
-8. Is writing the file neccessary each time? Can't we do something in memory? Or database?
-9. The forms file should be one class that can take in fieldnames and pass the value into whatever field we want - tried it already but failed, try again!
-10. All commented out prints should be displayed as extra info in UI
-11. Do not allow dots in the input box for subset names, in the tsne function we split on dot to remove the file extension and name the tsne files. Probably no big deal as we would just end up with something like "t-SNE-personal.csv.html"
+   - the flash method should be linked up to the template.
+7. Try plotly instead of matplotlib on pca / kmeans.
+8. Is writing the files the best approach? Investigate...
+9. The forms file should be one class that can take in fieldnames and pass the value into whatever field we want.
+10. All commented out prints should be displayed as extra info in UI.
