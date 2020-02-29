@@ -1,14 +1,14 @@
 # SETUP
-Install python
+1. Install python
     - remember to let it install pip for package management
-Install python extension for vs code
-Clone the repo
-Set up virtual environment
+2. Install python extension for vs code
+3. Clone the repo
+4. Set up virtual environment
     - py -3 -m venv .venv
-Open a new terminal in vs code
-You should see (.venv) in the new terminal
-pip install -r requirements.txt
-flask run
+5. Open a new terminal in vs code
+6. You should see (.venv) in the new terminal
+7. pip install -r requirements.txt
+8. flask run
 
 
 
