@@ -1,3 +1,17 @@
+# SETUP
+Install python
+    - remember to let it install pip for package management
+Install python extension for vs code
+Clone the repo
+Set up virtual environment
+    - py -3 -m venv .venv
+Open a new terminal in vs code
+You should see (.venv) in the new terminal
+pip install -r requirements.txt
+flask run
+
+
+
 # t-SNE App
 
 Front end that will guide you through the steps needed to use the t-SNE algorithm to visualise data.
