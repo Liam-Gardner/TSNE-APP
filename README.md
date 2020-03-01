@@ -9,6 +9,7 @@
 6. You should see (.venv) in the new terminal
 7. pip install -r requirements.txt
 8. flask run
+9. Navigate to http://localhost:5000/step-1-upload-file in your browser to begin
 
 
 
